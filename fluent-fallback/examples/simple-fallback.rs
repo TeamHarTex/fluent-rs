@@ -66,7 +66,7 @@ fn get_available_locales() -> io::Result<Vec<LanguageIdentifier>> {
     Ok(locales)
 }
 
-fn resolve_app_locales<'l>(args: &[String]) -> Vec<LanguageIdentifier> {
+fn resolve_app_locales(args: &[String]) -> Vec<LanguageIdentifier> {
     let default_locale = langid!("en-US");
     let available = get_available_locales().expect("Retrieving available locales failed.");
 
@@ -165,7 +165,7 @@ fn collatz(n: isize) -> isize {
     }
 }
 
-/// Bundle iterator used by BundleGeneratorSync implementation for Locales.
+/// Bundle iterator used by `BundleGeneratorSync` implementation for `Locales`.
 struct BundleIter {
     res_path_scheme: String,
     locales: <Vec<LanguageIdentifier> as IntoIterator>::IntoIter,

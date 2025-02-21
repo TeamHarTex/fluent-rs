@@ -56,15 +56,13 @@ fn get_available_locales() -> Result<Vec<LanguageIdentifier>, io::Error> {
     dir.push("examples");
     dir.push("resources");
     let res_dir = fs::read_dir(dir)?;
-    for entry in res_dir {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if path.is_dir() {
-                if let Some(name) = path.file_name() {
-                    if let Some(name) = name.to_str() {
-                        let langid = name.parse().expect("Parsing failed.");
-                        locales.push(langid);
-                    }
+    for entry in res_dir.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(name) = path.file_name() {
+                if let Some(name) = name.to_str() {
+                    let langid = name.parse().expect("Parsing failed.");
+                    locales.push(langid);
                 }
             }
         }
@@ -97,7 +95,7 @@ fn main() {
         NegotiationStrategy::Filtering,
     );
     let current_locale = resolved_locales
-        .get(0)
+        .first()
         .cloned()
         .expect("At least one locale should match.");
 
@@ -107,7 +105,7 @@ fn main() {
 
     // 6. Load the localization resource
     for path in L10N_RESOURCES {
-        let mut full_path = env::current_dir().expect("Failed to retireve current dir.");
+        let mut full_path = env::current_dir().expect("Failed to retrieve current dir.");
         if full_path.to_string_lossy().ends_with("fluent-rs") {
             full_path.push("fluent-bundle");
         }

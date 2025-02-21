@@ -151,11 +151,11 @@ impl<R, M> FluentBundle<R, M> {
     /// existing key in the bundle, the new entry will be ignored and a
     /// `FluentError::Overriding` will be added to the result.
     ///
-    /// The method can take any type that can be borrowed to `FluentResource`:
-    ///   - FluentResource
-    ///   - &FluentResource
-    ///   - Rc<FluentResource>
-    ///   - Arc<FluentResurce>
+    /// The method can take any type that can be borrowed to [`FluentResource`]:
+    ///   - `FluentResource`
+    ///   - `&FluentResource`
+    ///   - `Rc<FluentResource>`
+    ///   - `Arc<FluentResource>`
     ///
     /// This allows the user to introduce custom resource management and share
     /// resources between instances of `FluentBundle`.
@@ -241,11 +241,11 @@ impl<R, M> FluentBundle<R, M> {
     /// If any entry in the resource uses the same identifier as an already
     /// existing key in the bundle, the entry will override the previous one.
     ///
-    /// The method can take any type that can be borrowed as FluentResource:
-    ///   - FluentResource
-    ///   - &FluentResource
-    ///   - Rc<FluentResource>
-    ///   - Arc<FluentResurce>
+    /// The method can take any type that can be borrowed as [`FluentResource`]:
+    ///   - `FluentResource`
+    ///   - `&FluentResource`
+    ///   - `Rc<FluentResource>`
+    ///   - `Arc<FluentResource>`
     ///
     /// This allows the user to introduce custom resource management and share
     /// resources between instances of `FluentBundle`.
@@ -337,7 +337,7 @@ impl<R, M> FluentBundle<R, M> {
     /// be called on all textual fragments of the pattern
     /// during formatting.
     ///
-    /// This is currently primarly used for pseudolocalization,
+    /// This is currently primarily used for pseudolocalization,
     /// and `fluent-pseudo` crate provides a function
     /// that can be passed here.
     pub fn set_transform(&mut self, func: Option<fn(&str) -> Cow<str>>) {
@@ -497,10 +497,10 @@ impl<R, M> FluentBundle<R, M> {
     ///
     /// assert_eq!(result, "Hello World!");
     /// ```
-    pub fn format_pattern<'bundle, 'args>(
+    pub fn format_pattern<'bundle>(
         &'bundle self,
         pattern: &'bundle ast::Pattern<&'bundle str>,
-        args: Option<&'args FluentArgs>,
+        args: Option<&FluentArgs>,
         errors: &mut Vec<FluentError>,
     ) -> Cow<'bundle, str>
     where
@@ -562,6 +562,61 @@ impl<R, M> FluentBundle<R, M> {
             }),
         }
     }
+
+    /// Adds the builtin functions described in the [FTL syntax guide] to the bundle, making them
+    /// available in messages.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fluent_bundle::{FluentArgs, FluentBundle, FluentResource, FluentValue};
+    /// use unic_langid::langid;
+    ///
+    /// let ftl_string = String::from(r#"rank = { NUMBER($n, type: "ordinal") ->
+    ///     [1] first
+    ///     [2] second
+    ///     [3] third
+    ///     [one] {$n}st
+    ///     [two] {$n}nd
+    ///     [few] {$n}rd
+    ///     *[other] {$n}th
+    /// }"#);
+    /// let resource = FluentResource::try_new(ftl_string)
+    ///     .expect("Could not parse an FTL string.");
+    /// let langid_en = langid!("en-US");
+    /// let mut bundle = FluentBundle::new(vec![langid_en]);
+    /// bundle.add_resource(&resource)
+    ///     .expect("Failed to add FTL resources to the bundle.");
+    ///
+    /// // Register the builtin functions (including NUMBER())
+    /// bundle.add_builtins().expect("Failed to add builtins to the bundle.");
+    ///
+    /// let msg = bundle.get_message("rank").expect("Message doesn't exist.");
+    /// let mut errors = vec![];
+    /// let pattern = msg.value().expect("Message has no value.");
+    ///
+    /// let mut args = FluentArgs::new();
+    ///
+    /// args.set("n", 5);
+    /// let value = bundle.format_pattern(&pattern, Some(&args), &mut errors);
+    /// assert_eq!(&value, "\u{2068}5\u{2069}th");
+    ///
+    /// args.set("n", 12);
+    /// let value = bundle.format_pattern(&pattern, Some(&args), &mut errors);
+    /// assert_eq!(&value, "\u{2068}12\u{2069}th");
+    ///
+    /// args.set("n", 22);
+    /// let value = bundle.format_pattern(&pattern, Some(&args), &mut errors);
+    /// assert_eq!(&value, "\u{2068}22\u{2069}nd");
+    /// ```
+    ///
+    /// [FTL syntax guide]: https://projectfluent.org/fluent/guide/functions.html
+    pub fn add_builtins(&mut self) -> Result<(), FluentError> {
+        self.add_function("NUMBER", crate::builtins::NUMBER)?;
+        // TODO: DATETIME()
+
+        Ok(())
+    }
 }
 
 impl<R> Default for FluentBundle<R, IntlLangMemoizer> {
@@ -571,7 +626,7 @@ impl<R> Default for FluentBundle<R, IntlLangMemoizer> {
 }
 
 impl<R> FluentBundle<R, IntlLangMemoizer> {
-    /// Constructs a FluentBundle. The first element in `locales` should be the
+    /// Constructs a `FluentBundle`. The first element in `locales` should be the
     /// language this bundle represents, and will be used to determine the
     /// correct plural rules for this bundle. You can optionally provide extra
     /// languages in the list; they will be used as fallback date and time
@@ -592,7 +647,7 @@ impl<R> FluentBundle<R, IntlLangMemoizer> {
     ///
     /// This will panic if no formatters can be found for the locales.
     pub fn new(locales: Vec<LanguageIdentifier>) -> Self {
-        let first_locale = locales.get(0).cloned().unwrap_or_default();
+        let first_locale = locales.first().cloned().unwrap_or_default();
         Self {
             locales,
             resources: vec![],

@@ -1,7 +1,7 @@
 //! Fluent Translation List serialization utilities
 //!
 //! This modules provides a way to serialize an abstract syntax tree representing a
-//! Fluent Translation List. Use cases include normalization and programmatical
+//! Fluent Translation List. Use cases include normalization and programmatic
 //! manipulation of a Fluent Translation List.
 //!
 //! # Example
@@ -21,7 +21,7 @@
 //! assert_eq!(ftl, serialized);
 //! ```
 
-use crate::{ast::*, parser::Slice, parser::matches_fluent_ws};
+use crate::{ast::*, parser::matches_fluent_ws, parser::Slice};
 use std::fmt::Write;
 
 /// Serializes an abstract syntax tree representing a Fluent Translation List into a
@@ -89,7 +89,7 @@ impl Serializer {
                 Entry::ResourceComment(comment) => self.serialize_free_comment(comment, "###"),
                 Entry::Junk { content } => {
                     if self.options.with_junk {
-                        self.serialize_junk(content.as_ref())
+                        self.serialize_junk(content.as_ref());
                     }
                 }
             };
@@ -103,7 +103,7 @@ impl Serializer {
     }
 
     fn serialize_junk(&mut self, junk: &str) {
-        self.writer.write_literal(junk)
+        self.writer.write_literal(junk);
     }
 
     fn serialize_free_comment<'s, S: Slice<'s>>(&mut self, comment: &Comment<S>, prefix: &str) {
@@ -118,11 +118,7 @@ impl Serializer {
         for line in &comment.content {
             self.writer.write_literal(prefix);
 
-            if !line
-                .as_ref()
-                .trim_matches(matches_fluent_ws)
-                .is_empty()
-            {
+            if !line.as_ref().trim_matches(matches_fluent_ws).is_empty() {
                 self.writer.write_literal(" ");
                 self.writer.write_literal(line.as_ref());
             }
@@ -236,7 +232,7 @@ impl Serializer {
         match expr {
             Expression::Inline(inline) => self.serialize_inline_expression(inline),
             Expression::Select { selector, variants } => {
-                self.serialize_select_expression(selector, variants)
+                self.serialize_select_expression(selector, variants);
             }
         }
     }
@@ -324,7 +320,7 @@ impl Serializer {
     fn serialize_variant_key<'s, S: Slice<'s>>(&mut self, key: &VariantKey<S>) {
         match key {
             VariantKey::NumberLiteral { value } | VariantKey::Identifier { name: value } => {
-                self.writer.write_literal(value.as_ref())
+                self.writer.write_literal(value.as_ref());
             }
         }
     }
@@ -371,7 +367,7 @@ impl<'s, S: Slice<'s>> Pattern<S> {
     }
 
     fn has_leading_text_dot(&self) -> bool {
-        if let Some(PatternElement::TextElement { value }) = self.elements.get(0) {
+        if let Some(PatternElement::TextElement { value }) = self.elements.first() {
             value.as_ref().starts_with('.')
         } else {
             false

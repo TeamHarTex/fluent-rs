@@ -34,13 +34,13 @@ pub trait FluentType: fmt::Debug + AnyEq + 'static {
     /// Create a clone of the underlying type.
     fn duplicate(&self) -> Box<dyn FluentType + Send>;
 
-    /// Convert the custom type into a string value, for instance a custom DateTime
+    /// Convert the custom type into a string value, for instance a custom `DateTime`
     /// type could return "Oct. 27, 2022".
     fn as_string(&self, intls: &intl_memoizer::IntlLangMemoizer) -> Cow<'static, str>;
 
-    /// Convert the custom type into a string value, for instance a custom DateTime
+    /// Convert the custom type into a string value, for instance a custom `DateTime`
     /// type could return "Oct. 27, 2022". This operation is provided the threadsafe
-    /// [IntlLangMemoizer](intl_memoizer::concurrent::IntlLangMemoizer).
+    /// [`IntlLangMemoizer`](intl_memoizer::concurrent::IntlLangMemoizer).
     fn as_string_threadsafe(
         &self,
         intls: &intl_memoizer::concurrent::IntlLangMemoizer,
@@ -60,9 +60,7 @@ pub trait AnyEq: Any + 'static {
 
 impl<T: Any + PartialEq> AnyEq for T {
     fn equals(&self, other: &dyn Any) -> bool {
-        other
-            .downcast_ref::<Self>()
-            .map_or(false, |that| self == that)
+        other.downcast_ref::<Self>() == Some(self)
     }
     fn as_any(&self) -> &dyn Any {
         self
@@ -84,7 +82,7 @@ pub enum FluentValue<'source> {
     Error,
 }
 
-impl<'s> PartialEq for FluentValue<'s> {
+impl PartialEq for FluentValue<'_> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (FluentValue::String(s), FluentValue::String(s2)) => s == s2,
@@ -95,7 +93,7 @@ impl<'s> PartialEq for FluentValue<'s> {
     }
 }
 
-impl<'s> Clone for FluentValue<'s> {
+impl Clone for FluentValue<'_> {
     fn clone(&self) -> Self {
         match self {
             FluentValue::String(s) => FluentValue::String(s.clone()),
@@ -185,9 +183,9 @@ impl<'source> FluentValue<'source> {
         M: MemoizerKind,
     {
         match (self, other) {
-            (&FluentValue::String(ref a), &FluentValue::String(ref b)) => a == b,
-            (&FluentValue::Number(ref a), &FluentValue::Number(ref b)) => a == b,
-            (&FluentValue::String(ref a), &FluentValue::Number(ref b)) => {
+            (FluentValue::String(a), FluentValue::String(b)) => a == b,
+            (FluentValue::Number(a), FluentValue::Number(b)) => a == b,
+            (FluentValue::String(a), FluentValue::Number(b)) => {
                 let cat = match a.as_ref() {
                     "zero" => PluralCategory::ZERO,
                     "one" => PluralCategory::ONE,
@@ -199,13 +197,16 @@ impl<'source> FluentValue<'source> {
                 };
                 // This string matches a plural rule keyword. Check if the number
                 // matches the plural rule category.
+                let r#type = match b.options.r#type {
+                    FluentNumberType::Cardinal => PluralRuleType::CARDINAL,
+                    FluentNumberType::Ordinal => PluralRuleType::ORDINAL,
+                };
                 scope
                     .bundle
                     .intls
-                    .with_try_get_threadsafe::<PluralRules, _, _>(
-                        (PluralRuleType::CARDINAL,),
-                        |pr| pr.0.select(b) == Ok(cat),
-                    )
+                    .with_try_get_threadsafe::<PluralRules, _, _>((r#type,), |pr| {
+                        pr.0.select(b) == Ok(cat)
+                    })
                     .unwrap()
             }
             _ => false,
@@ -288,7 +289,7 @@ impl<'source> FluentValue<'source> {
     }
 }
 
-impl<'source> From<String> for FluentValue<'source> {
+impl From<String> for FluentValue<'_> {
     fn from(s: String) -> Self {
         FluentValue::String(s.into())
     }
